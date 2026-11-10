@@ -24,3 +24,13 @@ Do not reuse a `ModuleResolutionResult` instance merely because source text matc
 
 ## Discussion with collaborator
 Which smallest class of modules has a demonstrably sound reusable summary? Which resolver phase can be instrumented without changing behavior? Which invalidation dependency is currently missing?
+
+## First working trace
+
+Build `Source/Dafny/Dafny.csproj` in Release mode, then run:
+
+```bash
+DAFNY_RESOLUTION_TRACE=1 dotnet Binaries/net8.0/Dafny.dll resolve experiments/incremental-resolution/TwoModules.dfy
+```
+
+The opt-in trace reports per-declaration resolver wall-clock duration to stderr. This is not an incremental-cache benchmark, and individual runs are affected by JIT/warmup.

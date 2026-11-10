@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Diagnostics.Contracts;
 using System.Linq;
 using System.Threading;
@@ -62,9 +63,19 @@ public class ProgramResolver {
       rewriter.PreResolve(Program);
     }
 
+    // Opt-in, diagnostic-only timings. No resolution results are reused here.
+    var traceResolution = Environment.GetEnvironmentVariable("DAFNY_RESOLUTION_TRACE") == "1";
     foreach (var decl in sortedDecls) {
       cancellationToken.ThrowIfCancellationRequested();
+      var timer = traceResolution ? Stopwatch.StartNew() : null;
       var moduleResolutionResult = ResolveModuleDeclaration(compilation, decl);
+      if (timer != null) {
+        timer.Stop();
+        // Deliberately synchronous only in the opt-in diagnostic path.
+#pragma warning disable VSTHRD103
+        Console.Error.WriteLine($"[resolution-trace] module={decl.Name} elapsed_ms={timer.Elapsed.TotalMilliseconds:F3}");
+#pragma warning restore VSTHRD103
+      }
       ProcessDeclarationResolutionResult(moduleDeclarationPointers, decl, moduleResolutionResult);
     }
 
