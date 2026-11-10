@@ -34,3 +34,9 @@ DAFNY_RESOLUTION_TRACE=1 dotnet Binaries/net8.0/Dafny.dll resolve experiments/in
 ```
 
 The opt-in trace reports per-declaration resolver wall-clock duration to stderr. This is not an incremental-cache benchmark, and individual runs are affected by JIT/warmup.
+
+## Language-server cache control (experimental)
+
+The language server already uses `CachingResolver`, which keys results by dependency hashes, builtins hash, and `CloneId`. To compare its existing reuse path against a no-reuse control, launch the language-server process with `DAFNY_RESOLUTION_CACHE_BYPASS=1`. This bypasses **module** cache lookups and writes, not builtin caching. With `DAFNY_RESOLUTION_TRACE=1`, cache decisions are emitted through the language server logger at information level (`hit`, `miss`, `bypass`). The CLI `dafny resolve` does not exercise this language-server cache.
+
+**Important:** This is a diagnostic control, not a new sound cache algorithm. No result reattachment or content-hash reuse is implemented.

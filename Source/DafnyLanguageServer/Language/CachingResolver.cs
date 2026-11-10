@@ -57,17 +57,35 @@ public class CachingResolver : ProgramResolver {
   }
 
   protected override ModuleResolutionResult ResolveModuleDeclaration(CompilationData compilation, ModuleDecl decl) {
+    // Experimental control: bypass module reuse while retaining normal resolution.
+    // This allows paired language-server experiments on identical revisions.
+    var bypassCache = Environment.GetEnvironmentVariable("DAFNY_RESOLUTION_CACHE_BYPASS") == "1";
+    var trace = Environment.GetEnvironmentVariable("DAFNY_RESOLUTION_TRACE") == "1";
     var hash = GetHash(decl);
     hashes[decl] = hash;
 
+    if (bypassCache) {
+      logger.LogDebug("Resolution cache bypass for {Module}", decl.FullName);
+      if (trace) {
+        logger.LogInformation("[resolution-cache] module={Module} outcome=bypass", decl.FullName);
+      }
+      return base.ResolveModuleDeclaration(compilation, decl);
+    }
+
     if (!cache.Modules.TryGet(hash, out var result)) {
-      logger.LogDebug($"Resolution cache miss for {decl}");
+      logger.LogDebug("Resolution cache miss for {Module}", decl.FullName);
+      if (trace) {
+        logger.LogInformation("[resolution-cache] module={Module} outcome=miss", decl.FullName);
+      }
       var beforeResolution = DateTime.Now;
       result = base.ResolveModuleDeclaration(compilation, decl);
       cache.Modules.Set(hash, result);
       telemetryPublisher.PublishTime("ModuleResolution", decl.FullName, DateTime.Now - beforeResolution);
     } else {
-      logger.LogDebug($"Resolution cache hit for {decl}");
+      logger.LogDebug("Resolution cache hit for {Module}", decl.FullName);
+      if (trace) {
+        logger.LogInformation("[resolution-cache] module={Module} outcome=hit", decl.FullName);
+      }
     }
     return result!;
   }
